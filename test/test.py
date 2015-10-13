@@ -1,9 +1,11 @@
 __author__ = 'caoyawen'
 
 import unittest
-from cleaner import ConfigYAML, CollectPwd
-from pprint import pprint as pp
 from pathlib import Path
+import sys
+sys.path.append(str(Path(__file__).parent.parent))
+from ..cleaner import ConfigYAML, CollectPwd
+from pprint import pprint as pp
 
 
 class CollectAllFitFile:
