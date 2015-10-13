@@ -1,0 +1,12 @@
+name: 额外目录的配置文件
+#包含这样特征值的代码
+characteristic:
+#  - data: -----BEGIN RSA PRIVATE KEY-----
+  - data: special_data2
+#剔除这个文件本身
+    exclude:
+      - clean.yaml
+
+dir:
+  - special_dir/sub_dir
+
