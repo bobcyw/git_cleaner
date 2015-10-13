@@ -3,6 +3,7 @@ import yaml
 import os
 from pathlib import Path
 import subprocess
+import pyparsing
 
 
 class ConfigYAML:
@@ -23,6 +24,7 @@ class ConfigYAML:
 
     def clean_git(self):
         branch = self.config.get("branch", "")
+        old_branch = current_branch(self.pwd)
         if branch:
             cmd_line = "/usr/bin/git checkout {branch}".format(branch=branch)
             _, error = call_cmd_with_status(cmd_line, self.pwd)
@@ -30,18 +32,24 @@ class ConfigYAML:
                 print(cmd_line)
                 print(error)
         for file in self.fit_file_list:
-            cmd_line = "/usr/bin/git filter-branch --index-filter 'git rm {file} --cached' HEAD".format(file=file)
+            cmd_line = "/usr/bin/git filter-branch -f --index-filter 'git rm --cached --ignore-unmatch {file}' HEAD".format(file=file)
             _, error = call_cmd_with_status(cmd_line, self.pwd)
             if error:
                 print(cmd_line)
                 print(error)
         for special_path in self.fit_dir:
-            cmd_line = "/usr/bin/git filter-branch --index-filter 'git rm -r {path} --cached' HEAD".format(path=special_path)
+            cmd_line = "/usr/bin/git filter-branch -f --index-filter 'git rm -r --cached --ignore-unmatch {path}' HEAD".format(path=special_path)
             _, error = call_cmd_with_status(cmd_line, self.pwd)
             if error:
                 print(cmd_line)
                 print(error)
-        self.enum_config(lambda config:config.clean_git())
+
+        cmd_line = "/usr/bin/git checkout {old_branch}".format(old_branch=old_branch)
+        _, error = call_cmd_with_status(cmd_line, self.pwd)
+        if error:
+            print(cmd_line)
+            print(error)
+
 
     @property
     def pwd(self)->str:
@@ -258,6 +266,24 @@ def call_cmd_with_status(cmd_line, work_dir):
                           stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     (out, error) = pr.communicate()
     return out, error
+    # print(cmd_line, work_dir)
+    # return "", ""
+
+def current_branch(target_path):
+    out, error = call_cmd_with_status("/usr/bin/git branch", target_path)
+    # print("get current branch")
+    for one_line in out.split(b'\n'):
+        if one_line:
+            print(one_line)
+            print(one_line[0])
+            if 42 == one_line[0]:
+                # 解析 b'* master'
+                branch_des = one_line.decode('utf-8')
+                print(branch_des)
+                current_branch_parse = pyparsing.Literal("*") + pyparsing.Word(pyparsing.alphas+pyparsing.alphanums)("branch")
+                result = current_branch_parse.parseString(branch_des)
+                return result.branch
+    return ""
 
 
 if __name__ == '__main__':
