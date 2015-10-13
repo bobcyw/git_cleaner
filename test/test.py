@@ -1,9 +1,9 @@
 __author__ = 'caoyawen'
 
 import unittest
-from cleaner import ConfigYAML, CollectPwd
-from pprint import pprint as pp
 from pathlib import Path
+from git_cleaner.cleaner import ConfigYAML, CollectPwd
+from pprint import pprint as pp
 
 
 class CollectAllFitFile:
