@@ -13,9 +13,17 @@ class CollectAllFitFile:
     def __call__(self, config: ConfigYAML):
         self.all_fit_file += config.fit_file_list
 
+class CollectAllFitDir:
+    def __init__(self):
+        self.all_fit_dir = []
+
+    def __call__(self, config: ConfigYAML):
+        self.all_fit_dir += config.fit_dir
+
 
 class MyTestCase(unittest.TestCase):
     config_file = Path(__file__).parent.joinpath("cleaner.yaml")
+    blank_config_file = Path(__file__).parent.joinpath("cleaner_blank.yaml")
 
     def test_load_confgi(self):
         config_file_parent = self.config_file.parent
@@ -26,39 +34,42 @@ class MyTestCase(unittest.TestCase):
         # pp("collect config file's pwd is {pwd_list}".format(pwd_list=cp.pwd_list))
         self.assertEqual([str(config_file_parent.joinpath("append")), str(config_file_parent)], cp.pwd_list)
         self.assertEqual(
-            [str(config_file_parent.joinpath('test.py')),
-             str(config_file_parent.joinpath('special_dir/data.txt')),
-             str(config_file_parent.joinpath('special_dir/sub_dir/data.txt')),
-             str(config_file_parent.joinpath('contain_special_data.txt')),
-             # str(config_file_parent.joinpath('test.py'))
+            ['test.py',
+             # 'special_dir/data.txt',
+             # 'special_dir/sub_dir/data.txt',
+             'contain_special_data.txt',
              ],
             cy.fit_file_list
         )
-        pp(cy.fit_file_list)
-        # print(cy.add_by_handle_file)
-        # print(cy.add_by_handle_dir)
-        # print(cy.add_by_characteristic)
-        all_fit_file_list = []
+        self.assertEqual(["special_dir"], cy.fit_dir)
         caff = CollectAllFitFile()
         cy.enum_config(caff)
         # pp(caff.all_fit_file)
         self.assertEqual(caff.all_fit_file,
                          [
-                             str(config_file_parent.joinpath('append/special_dir/sub_dir/data.txt')),
-                             str(config_file_parent.joinpath('append/contain_special_data.txt')),
-                             str(config_file_parent.joinpath('test.py')),
-                             str(config_file_parent.joinpath('special_dir/data.txt')),
-                             str(config_file_parent.joinpath('special_dir/sub_dir/data.txt')),
-                             str(config_file_parent.joinpath('contain_special_data.txt'))
+                             # 'special_dir/sub_dir/data.txt',
+                             'contain_special_data.txt',
+                             'test.py',
+                             # 'special_dir/data.txt',
+                             # 'special_dir/sub_dir/data.txt',
+                             'contain_special_data.txt'
+                         ])
+        cafd = CollectAllFitDir()
+        cy.enum_config(cafd)
+        self.assertEqual(cafd.all_fit_dir,
+                         [
+                             "special_dir/sub_dir",
+                             "special_dir",
                          ])
         # cy.enum_config(lambda config: print("{name}'s handle file list:{handle_file_list}".format(
         #     name=config.name, handle_file_list=config.handle_file_list)))
         # print("{name}'s add by handle dir:{abhd}".format(name=cy.name, abhd=cy.add_by_handle_dir))
         # print("{name}'s base exclude path:{exclude_path}".format(name=cy.name, exclude_path=cy.base_exclude_path))
 
-    def test_exclude_dir(self):
-        cy = ConfigYAML(str(self.config_file), True)
-        # enum_config()
+    def test_blank_conig(self):
+        cy = ConfigYAML(str(self.blank_config_file), True)
+        print(cy.fit_dir)
+        print(cy.fit_file_list)
 
 
 if __name__ == '__main__':

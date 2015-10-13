@@ -6,7 +6,7 @@ characteristic:
 #  - data: -----BEGIN RSA PRIVATE KEY-----
 #剔除这个文件本身
     exclude:
-      - clean.yaml
+      - cleaner.yaml
 #特别指定要处理的文件
 file:
   - test.py

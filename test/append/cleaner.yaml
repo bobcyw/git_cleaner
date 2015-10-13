@@ -5,7 +5,7 @@ characteristic:
   - data: special_data2
 #剔除这个文件本身
     exclude:
-      - clean.yaml
+      - cleaner.yaml
 
 dir:
   - special_dir/sub_dir
