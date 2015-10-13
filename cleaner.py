@@ -1,0 +1,226 @@
+__author__ = 'caoyawen'
+import yaml
+import os
+from pathlib import Path
+
+
+class ConfigYAML:
+    def __init__(self, fn: str, debug=False):
+        """
+        初始化
+        :param fn: 指定的配置文件，每个配置文件管理对应目录以及子目录，子配置文件在父配置文件中时，子配置文件的作用范围覆盖父配置文件，而非继承
+        :param debug: 用于调试时查看内部状态
+        :return:
+        """
+        self.fn = fn
+        self.debug = debug
+        if debug:
+            self.handle_file_list = []
+        self.config = self.load_config()
+        self.name = self.config.get("name", "缺省配置文件")
+        self.handle_config()
+
+    @property
+    def pwd(self)->str:
+        return self.config["pwd"]
+
+    @property
+    def base_exclude_path(self):
+        """
+        基础需要排除的目录和文件，包括自己，子配置文件的目录
+        :return:
+        """
+        cp = CollectPwd()
+        self.enum_config(cp)
+        exclude_dir = cp.pwd_list
+        exclude_dir.remove(self.pwd)
+        exclude_dir.append(self.fn)
+        return exclude_dir
+
+    def load_config(self)->dict:
+        """
+        载入配置文件
+        :param fn: 指定的目录
+        :return: dict
+        """
+        config_p = Path(self.fn)
+        content = config_p.read_bytes().decode()
+        clean_config = yaml.load(content)
+
+        # 解析得到工作路径
+        pwd = str(config_p.parent)
+        clean_config["pwd"] = pwd
+
+        # 处理扩展file的问题
+        append_config_fn_list = clean_config.get("append", [])
+        append_config_list = []
+        for append_config_fn in append_config_fn_list:
+            new_append_config_fn = os.path.join(pwd, append_config_fn)
+            append_config_list.append(ConfigYAML(new_append_config_fn, self.debug))
+        clean_config["append_config_list"] = append_config_list
+
+        return clean_config
+
+    def handle_config(self)->[]:
+        """
+        处理配置文件
+        :param config:
+        :return:
+        """
+        fit_file_list = []
+        fit_file_list += self.handle_file()
+        fit_file_list += self.handle_dir()
+        fit_file_list += self.handle_characteristic()
+        self.fit_file_list = remove_dumplacat_item(fit_file_list)
+
+    def handle_dir(self)->[]:
+        """
+        把指定目录下的所有文件都包含进去
+        :param config:
+        :return: 符合清理的文件列表
+        """
+        # fit_file_list = []
+        dirs = self.config.get("dir", [])
+        caf = CollectAnyFile()
+        for one_dir in dirs:
+            self.enum_file(os.path.join(self.pwd, one_dir), self.base_exclude_path, caf)
+        if self.debug:
+            self.add_by_handle_dir = caf.file_list
+        return caf.file_list
+
+    def handle_file(self)->[]:
+        """
+        得到文件
+        :param config:
+        :return: 符合清理的文件列表
+        """
+        if self.debug:
+            self.add_by_handle_file = [os.path.join(self.pwd, item) for item in self.config.get("file", [])]
+        return [os.path.join(self.pwd, item) for item in self.config.get("file", [])]
+
+    def handle_characteristic(self)->[]:
+        """
+        根据特征值得到符合的文件
+        :param config:
+        :return: []
+        """
+        characteristic_list = self.config.get("characteristic", [])
+        exclude_dir = self.base_exclude_path
+
+        cff = CollectFitFile(characteristic_list)
+        self.enum_file(self.pwd, exclude_dir, cff)
+        if self.debug:
+            self.add_by_characteristic = cff.fit_file
+        return cff.fit_file
+
+    def __repr__(self):
+        return "{name}: {content}".format(name = self.name, content = str(self.config))
+
+    def enum_file(self, given_path: str, exclude_path:[], handler):
+        """
+        遍历除了exclude_path指定的目录以外的其他目录
+        :param given_path: 要遍历的目录
+        :param exclude_path: 排除的目录
+        :param handler: 处理函数， handler(item:Path)
+        :return: 没有需要返回的内容
+        """
+        p = Path(given_path)
+        if given_path in exclude_path:
+            # 如果指定目录本身就是被排除的目录，就直接返回
+            return
+        for item in p.iterdir():
+            if item.is_dir():
+                if str(item) not in exclude_path:
+                    self.enum_file(str(item), exclude_path, handler)
+            if item.is_file():
+                if str(item) != self.fn:
+                    # 防止自己被包括进去
+                    if self.debug:
+                        self.handle_file_list.append(str(item))
+                    handler(item)
+
+    def enum_config(self, handler):
+        """
+        遍历配置文件以及每一个子配置文件
+        :param handler: function(data:ConfigYAML),这里的data就是ConfigYAML本身，方便调试
+        :return:
+        """
+        for sub_config in self.config.get("append_config_list", []):
+            sub_config.enum_config(handler)
+        handler(self)
+
+
+class CollectAnyFile:
+    """
+    收集所有的特征值文件
+    """
+    def __init__(self):
+        self.file_list = []
+
+    def __call__(self, file: Path):
+        self.file_list.append(str(file))
+
+
+class CollectFitFile:
+    """
+    收集符合特征值的文件
+    """
+    def __init__(self, characteristic: []):
+        self.characteristic = characteristic
+        self.fit_file = []
+        self.none_unicode_file = []
+        self.exclude_file = []
+
+    def __call__(self, file_item: Path):
+        """
+        Path必须是is_file() true
+        """
+        try:
+            content = file_item.read_bytes().decode()
+        except UnicodeDecodeError:
+            # 不处理无法decode的代码
+            self.none_unicode_file.append(str(file_item))
+            return
+        for one_char in self.characteristic:
+            for exclude_file in one_char.get("exclude", []):
+                if file_item.name == exclude_file:
+                    #跳过需要排除的文件
+                    self.exclude_file.append(exclude_file)
+                    return
+                # print("fit file {fn} by {exclude}".format(fn=file_item.name, exclude=exclude_file))
+            if one_char["data"] in content:
+                self.fit_file.append(str(file_item))
+                break
+
+
+class CollectPwd:
+    """
+    收集配置文件里的pwd
+    """
+    def __init__(self):
+        self.pwd_list = []
+
+    def __call__(self, config: ConfigYAML):
+        self.pwd_list.append(config.config["pwd"])
+
+
+def remove_dumplacat_item(data:list):
+    """
+    删除一个列表中重复的项目
+    :param data:
+    :return:
+    """
+    record = {}
+    new_data = []
+    for item in data:
+        if record.get(item, 0) == 1:
+            continue
+        record[item] = 1
+        new_data.append(item)
+    return new_data
+
+
+if __name__ == '__main__':
+    import argparse
+    parser = argparse.ArgumentParser("根据指定的yaml定义的规则彻底删除掉git中符合的文件")
+
