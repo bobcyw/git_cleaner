@@ -24,6 +24,7 @@ class CollectAllFitDir:
 class MyTestCase(unittest.TestCase):
     config_file = Path(__file__).parent.joinpath("cleaner.yaml")
     blank_config_file = Path(__file__).parent.joinpath("cleaner_blank.yaml")
+    real_config = Path(__file__).parent.parent.joinpath("cleaner_test.yaml.")
 
     def test_load_confgi(self):
         config_file_parent = self.config_file.parent
@@ -70,6 +71,10 @@ class MyTestCase(unittest.TestCase):
         cy = ConfigYAML(str(self.blank_config_file), True)
         print(cy.fit_dir)
         print(cy.fit_file_list)
+
+    def test_real_git_cleaner(self):
+        cy = ConfigYAML(str(self.real_config), True)
+        cy.clean_git()
 
 
 if __name__ == '__main__':

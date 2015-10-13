@@ -1,0 +1,5 @@
+branch: public
+file:
+  - delete_file.txt
+dir:
+  - test/delete_dir
