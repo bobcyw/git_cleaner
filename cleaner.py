@@ -2,6 +2,7 @@ __author__ = 'caoyawen'
 import yaml
 import os
 from pathlib import Path
+import subprocess
 
 
 class ConfigYAML:
@@ -19,6 +20,28 @@ class ConfigYAML:
         self.config = self.load_config()
         self.name = self.config.get("name", "缺省配置文件")
         self.handle_config()
+
+    def clean_git(self):
+        branch = self.config.get("branch", "")
+        if branch:
+            cmd_line = "/usr/bin/git checkout {branch}".format(branch=branch)
+            _, error = call_cmd_with_status(cmd_line, self.pwd)
+            if error:
+                print(cmd_line)
+                print(error)
+        for file in self.fit_file_list:
+            cmd_line = "/usr/bin/git filter-branch --index-filter 'git rm {file} --cached' HEAD".format(file=file)
+            _, error = call_cmd_with_status(cmd_line, self.pwd)
+            if error:
+                print(cmd_line)
+                print(error)
+        for special_path in self.fit_dir:
+            cmd_line = "/usr/bin/git filter-branch --index-filter 'git rm -r {path} --cached' HEAD".format(path=special_path)
+            _, error = call_cmd_with_status(cmd_line, self.pwd)
+            if error:
+                print(cmd_line)
+                print(error)
+        self.enum_config(lambda config:config.clean_git())
 
     @property
     def pwd(self)->str:
@@ -46,7 +69,8 @@ class ConfigYAML:
         config_p = Path(self.fn)
         content = config_p.read_bytes().decode()
         clean_config = yaml.load(content)
-
+        if not clean_config:
+            clean_config = {}
         # 解析得到工作路径
         pwd = str(config_p.parent)
         clean_config["pwd"] = pwd
@@ -69,9 +93,12 @@ class ConfigYAML:
         """
         fit_file_list = []
         fit_file_list += self.handle_file()
-        fit_file_list += self.handle_dir()
+        # fit_file_list += self.handle_dir()
         fit_file_list += self.handle_characteristic()
+        # git用的是相对路径，所以我们也要用相对路径
+        fit_file_list = [item.replace(self.pwd+"/", "") for item in fit_file_list]
         self.fit_file_list = remove_dumplacat_item(fit_file_list)
+        self.fit_dir = self.config.get("dir", [])
 
     def handle_dir(self)->[]:
         """
@@ -218,6 +245,19 @@ def remove_dumplacat_item(data:list):
         record[item] = 1
         new_data.append(item)
     return new_data
+
+
+def call_cmd_with_status(cmd_line, work_dir):
+    """
+    处理函数
+    :param cmd_line:
+    :param work_dir:
+    :return: 正常返回，错误返回
+    """
+    pr = subprocess.Popen(cmd_line, cwd=work_dir, shell=True,
+                          stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    (out, error) = pr.communicate()
+    return out, error
 
 
 if __name__ == '__main__':
