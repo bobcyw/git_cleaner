@@ -15,4 +15,4 @@ dir:
   - special_dir
 
 append:
-  - append/clean.yaml
+  - append/cleaner.yaml

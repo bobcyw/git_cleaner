@@ -15,7 +15,7 @@ class CollectAllFitFile:
 
 
 class MyTestCase(unittest.TestCase):
-    config_file = Path(__file__).parent.joinpath("clean.yaml")
+    config_file = Path(__file__).parent.joinpath("cleaner.yaml")
 
     def test_load_confgi(self):
         config_file_parent = self.config_file.parent
@@ -34,6 +34,7 @@ class MyTestCase(unittest.TestCase):
              ],
             cy.fit_file_list
         )
+        pp(cy.fit_file_list)
         # print(cy.add_by_handle_file)
         # print(cy.add_by_handle_dir)
         # print(cy.add_by_characteristic)
