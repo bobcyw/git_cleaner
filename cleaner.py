@@ -23,33 +23,41 @@ class ConfigYAML:
         self.handle_config()
 
     def clean_git(self):
+        print("{name}'s git clean start".format(name=self.name))
         branch = self.config.get("branch", "")
         old_branch = current_branch(self.pwd)
+        print("checkout branch")
         if branch:
             cmd_line = "/usr/bin/git checkout {branch}".format(branch=branch)
+            print(cmd_line)
             _, error = call_cmd_with_status(cmd_line, self.pwd)
             if error:
                 print(cmd_line)
                 print(error)
+        print("clean fit file")
         for file in self.fit_file_list:
             cmd_line = "/usr/bin/git filter-branch -f --index-filter 'git rm --cached --ignore-unmatch {file}' HEAD".format(file=file)
+            print(cmd_line)
             _, error = call_cmd_with_status(cmd_line, self.pwd)
             if error:
                 print(cmd_line)
                 print(error)
+        print("clean fit dir")
         for special_path in self.fit_dir:
             cmd_line = "/usr/bin/git filter-branch -f --index-filter 'git rm -r --cached --ignore-unmatch {path}' HEAD".format(path=special_path)
+            print(cmd_line)
             _, error = call_cmd_with_status(cmd_line, self.pwd)
             if error:
                 print(cmd_line)
                 print(error)
-
+        print("go back old branch")
         cmd_line = "/usr/bin/git checkout {old_branch}".format(old_branch=old_branch)
+        print(cmd_line)
         _, error = call_cmd_with_status(cmd_line, self.pwd)
         if error:
             print(cmd_line)
             print(error)
-
+        print("git clean end")
 
     @property
     def pwd(self)->str:
