@@ -51,12 +51,13 @@ class ConfigYAML:
                 print(cmd_line)
                 print(error)
         print("go back old branch")
-        cmd_line = "/usr/bin/git checkout {old_branch}".format(old_branch=old_branch)
-        print(cmd_line)
-        _, error = call_cmd_with_status(cmd_line, self.pwd)
-        if error:
+        if branch:
+            cmd_line = "/usr/bin/git checkout {old_branch}".format(old_branch=old_branch)
             print(cmd_line)
-            print(error)
+            _, error = call_cmd_with_status(cmd_line, self.pwd)
+            if error:
+                print(cmd_line)
+                print(error)
         print("git clean end")
 
     @property
@@ -107,6 +108,17 @@ class ConfigYAML:
         :param config:
         :return:
         """
+        branch = self.config.get("branch", "")
+        old_branch = current_branch(self.pwd)
+        print("checkout branch")
+        if branch:
+            cmd_line = "/usr/bin/git checkout {branch}".format(branch=branch)
+            print(cmd_line)
+            _, error = call_cmd_with_status(cmd_line, self.pwd)
+            if error:
+                print(cmd_line)
+                print(error)
+
         fit_file_list = []
         fit_file_list += self.handle_file()
         # fit_file_list += self.handle_dir()
@@ -115,6 +127,15 @@ class ConfigYAML:
         fit_file_list = [item.replace(self.pwd+"/", "") for item in fit_file_list]
         self.fit_file_list = remove_dumplacat_item(fit_file_list)
         self.fit_dir = self.config.get("dir", [])
+
+        print("go back old branch")
+        if branch:
+            cmd_line = "/usr/bin/git checkout {old_branch}".format(old_branch=old_branch)
+            print(cmd_line)
+            _, error = call_cmd_with_status(cmd_line, self.pwd)
+            if error:
+                print(cmd_line)
+                print(error)
 
     def handle_dir(self)->[]:
         """
@@ -203,7 +224,6 @@ class ConfigYAML:
             for path in self.fit_dir:
                 put(path)
         put("end")
-
 
 
 class CollectAnyFile:
@@ -295,12 +315,12 @@ def current_branch(target_path):
     # print("get current branch")
     for one_line in out.split(b'\n'):
         if one_line:
-            print(one_line)
-            print(one_line[0])
+            # print(one_line)
+            # print(one_line[0])
             if 42 == one_line[0]:
                 # 解析 b'* master'
                 branch_des = one_line.decode('utf-8')
-                print(branch_des)
+                # print(branch_des)
                 current_branch_parse = pyparsing.Literal("*") + pyparsing.Word(pyparsing.alphas+pyparsing.alphanums)("branch")
                 result = current_branch_parse.parseString(branch_des)
                 return result.branch
@@ -316,5 +336,5 @@ if __name__ == '__main__':
     cy = ConfigYAML(ret.config_file)
     cy.enum_config(lambda config: config.report())
     if ret.write is True:
-        cy.clean_git()
+        cy.enum_config(lambda config: config.clean_git())
         print("clean git complete")
