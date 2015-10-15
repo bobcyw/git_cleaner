@@ -32,13 +32,13 @@ class ConfigYAML:
                 print(cmd_line)
                 print(error)
         for file in self.fit_file_list:
-            cmd_line = "/usr/bin/git filter-branch -f --index-filter 'git rm --cached --ignore-unmatch {file}' HEAD".format(file=file)
+            cmd_line = "/usr/bin/git filter-branch -f --index-filter 'git rm --cached --ignore-unmatch {file}' {branch}".format(file=file, branch=branch)
             _, error = call_cmd_with_status(cmd_line, self.pwd)
             if error:
                 print(cmd_line)
                 print(error)
         for special_path in self.fit_dir:
-            cmd_line = "/usr/bin/git filter-branch -f --index-filter 'git rm -r --cached --ignore-unmatch {path}' HEAD".format(path=special_path)
+            cmd_line = "/usr/bin/git filter-branch -f --index-filter 'git rm -r --cached --ignore-unmatch {path}' {branch}".format(path=special_path, branch=branch)
             _, error = call_cmd_with_status(cmd_line, self.pwd)
             if error:
                 print(cmd_line)
