@@ -23,33 +23,40 @@ class ConfigYAML:
         self.handle_config()
 
     def clean_git(self):
+        print("{name}'s git clean start".format(name=self.name))
         branch = self.config.get("branch", "")
         old_branch = current_branch(self.pwd)
+        print("checkout branch")
         if branch:
             cmd_line = "/usr/bin/git checkout {branch}".format(branch=branch)
-            _, error = call_cmd_with_status(cmd_line, self.pwd)
-            if error:
-                print(cmd_line)
-                print(error)
-        for file in self.fit_file_list:
-            cmd_line = "/usr/bin/git filter-branch -f --index-filter 'git rm --cached --ignore-unmatch {file}' {branch}".format(file=file, branch=branch)
-            _, error = call_cmd_with_status(cmd_line, self.pwd)
-            if error:
-                print(cmd_line)
-                print(error)
-        for special_path in self.fit_dir:
-            cmd_line = "/usr/bin/git filter-branch -f --index-filter 'git rm -r --cached --ignore-unmatch {path}' {branch}".format(path=special_path, branch=branch)
-            _, error = call_cmd_with_status(cmd_line, self.pwd)
-            if error:
-                print(cmd_line)
-                print(error)
-
-        cmd_line = "/usr/bin/git checkout {old_branch}".format(old_branch=old_branch)
-        _, error = call_cmd_with_status(cmd_line, self.pwd)
-        if error:
             print(cmd_line)
-            print(error)
-
+            _, error = call_cmd_with_status(cmd_line, self.pwd)
+            if error:
+                print(cmd_line)
+                print(error)
+        print("clean fit file")
+        for file in self.fit_file_list:
+            cmd_line = "/usr/bin/git filter-branch -f --index-filter 'git rm --cached --ignore-unmatch {file}' HEAD".format(file=file)
+            _, error = call_cmd_with_status(cmd_line, self.pwd)
+            if error:
+                print(cmd_line)
+                print(error)
+        print("clean fit dir")
+        for special_path in self.fit_dir:
+            cmd_line = "/usr/bin/git filter-branch -f --index-filter 'git rm -r --cached --ignore-unmatch {path}' HEAD".format(path=special_path)
+            _, error = call_cmd_with_status(cmd_line, self.pwd)
+            if error:
+                print(cmd_line)
+                print(error)
+        print("go back old branch")
+        if branch:
+            cmd_line = "/usr/bin/git checkout {old_branch}".format(old_branch=old_branch)
+            print(cmd_line)
+            _, error = call_cmd_with_status(cmd_line, self.pwd)
+            if error:
+                print(cmd_line)
+                print(error)
+        print("git clean end")
 
     @property
     def pwd(self)->str:
@@ -99,6 +106,17 @@ class ConfigYAML:
         :param config:
         :return:
         """
+        branch = self.config.get("branch", "")
+        old_branch = current_branch(self.pwd)
+        print("checkout branch")
+        if branch:
+            cmd_line = "/usr/bin/git checkout {branch}".format(branch=branch)
+            print(cmd_line)
+            _, error = call_cmd_with_status(cmd_line, self.pwd)
+            if error:
+                print(cmd_line)
+                print(error)
+
         fit_file_list = []
         fit_file_list += self.handle_file()
         # fit_file_list += self.handle_dir()
@@ -107,6 +125,15 @@ class ConfigYAML:
         fit_file_list = [item.replace(self.pwd+"/", "") for item in fit_file_list]
         self.fit_file_list = remove_dumplacat_item(fit_file_list)
         self.fit_dir = self.config.get("dir", [])
+
+        print("go back old branch")
+        if branch:
+            cmd_line = "/usr/bin/git checkout {old_branch}".format(old_branch=old_branch)
+            print(cmd_line)
+            _, error = call_cmd_with_status(cmd_line, self.pwd)
+            if error:
+                print(cmd_line)
+                print(error)
 
     def handle_dir(self)->[]:
         """
@@ -183,6 +210,18 @@ class ConfigYAML:
         for sub_config in self.config.get("append_config_list", []):
             sub_config.enum_config(handler)
         handler(self)
+
+    def report(self, put=print):
+        put(self.name)
+        if self.fit_file_list:
+            put("fit file")
+            for file in self.fit_file_list:
+                put(file)
+        if self.fit_dir:
+            put("fit dir")
+            for path in self.fit_dir:
+                put(path)
+        put("end")
 
 
 class CollectAnyFile:
@@ -274,12 +313,12 @@ def current_branch(target_path):
     # print("get current branch")
     for one_line in out.split(b'\n'):
         if one_line:
-            print(one_line)
-            print(one_line[0])
+            # print(one_line)
+            # print(one_line[0])
             if 42 == one_line[0]:
                 # 解析 b'* master'
                 branch_des = one_line.decode('utf-8')
-                print(branch_des)
+                # print(branch_des)
                 current_branch_parse = pyparsing.Literal("*") + pyparsing.Word(pyparsing.alphas+pyparsing.alphanums)("branch")
                 result = current_branch_parse.parseString(branch_des)
                 return result.branch
@@ -289,4 +328,11 @@ def current_branch(target_path):
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser("根据指定的yaml定义的规则彻底删除掉git中符合的文件")
-
+    parser.add_argument("config_file", metavar="配置yaml", help="需要删除文件的定义文件，用yaml格式")
+    parser.add_argument("-write", action="store_true", help="执行清理操作，没有这个选项，只显示计划清理的文件，而不真正操作")
+    ret = parser.parse_args()
+    cy = ConfigYAML(ret.config_file)
+    cy.enum_config(lambda config: config.report())
+    if ret.write is True:
+        cy.enum_config(lambda config: config.clean_git())
+        print("clean git complete")
