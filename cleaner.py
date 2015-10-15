@@ -194,12 +194,14 @@ class ConfigYAML:
 
     def report(self, put=print):
         put(self.name)
-        put("fit file")
-        for file in self.fit_file_list:
-            put(file)
-        put("fit dir")
-        for path in self.fit_dir:
-            put(path)
+        if self.fit_file_list:
+            put("fit file")
+            for file in self.fit_file_list:
+                put(file)
+        if self.fit_dir:
+            put("fit dir")
+            for path in self.fit_dir:
+                put(path)
         put("end")
 
 
