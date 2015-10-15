@@ -184,6 +184,17 @@ class ConfigYAML:
             sub_config.enum_config(handler)
         handler(self)
 
+    def report(self, put=print):
+        put(self.name)
+        put("fit file")
+        for file in self.fit_file_list:
+            put(file)
+        put("fit dir")
+        for path in self.fit_dir:
+            put(path)
+        put("end")
+
+
 
 class CollectAnyFile:
     """
@@ -289,4 +300,11 @@ def current_branch(target_path):
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser("根据指定的yaml定义的规则彻底删除掉git中符合的文件")
-
+    parser.add_argument("config_file", metavar="配置yaml", help="需要删除文件的定义文件，用yaml格式")
+    parser.add_argument("-write", action="store_true", help="执行清理操作，没有这个选项，只显示计划清理的文件，而不真正操作")
+    ret = parser.parse_args()
+    cy = ConfigYAML(ret.config_file)
+    cy.enum_config(lambda config: config.report())
+    if ret.write is True:
+        cy.clean_git()
+        print("clean git complete")
