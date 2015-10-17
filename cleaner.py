@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 import subprocess
 import pyparsing
+from contextlib import ContextDecorator
 
 
 class ConfigYAML:
@@ -25,38 +26,39 @@ class ConfigYAML:
     def clean_git(self):
         print("{name}'s git clean start".format(name=self.name))
         branch = self.config.get("branch", "")
-        old_branch = current_branch(self.pwd)
-        print("checkout branch")
-        if branch:
-            cmd_line = "/usr/bin/git checkout {branch}".format(branch=branch)
-            print(cmd_line)
-            _, error = call_cmd_with_status(cmd_line, self.pwd)
-            if error:
-                print(cmd_line)
-                print(error)
-        print("clean fit file")
-        for file in self.fit_file_list:
-            cmd_line = "/usr/bin/git filter-branch -f --index-filter 'git rm --cached --ignore-unmatch {file}' HEAD".format(file=file)
-            _, error = call_cmd_with_status(cmd_line, self.pwd)
-            if error:
-                print(cmd_line)
-                print(error)
-        print("clean fit dir")
-        for special_path in self.fit_dir:
-            cmd_line = "/usr/bin/git filter-branch -f --index-filter 'git rm -r --cached --ignore-unmatch {path}' HEAD".format(path=special_path)
-            _, error = call_cmd_with_status(cmd_line, self.pwd)
-            if error:
-                print(cmd_line)
-                print(error)
-        print("go back old branch")
-        if branch:
-            cmd_line = "/usr/bin/git checkout {old_branch}".format(old_branch=old_branch)
-            print(cmd_line)
-            _, error = call_cmd_with_status(cmd_line, self.pwd)
-            if error:
-                print(cmd_line)
-                print(error)
-        print("git clean end")
+        with EnterBranch(branch, self.pwd):
+            # old_branch = current_branch(self.pwd)
+            # print("checkout branch")
+            # if branch:
+            #     cmd_line = "/usr/bin/git checkout {branch}".format(branch=branch)
+            #     print(cmd_line)
+            #     _, error = call_cmd_with_status(cmd_line, self.pwd)
+            #     if error:
+            #         print(cmd_line)
+            #         print(error)
+            print("clean fit file")
+            for file in self.fit_file_list:
+                cmd_line = "/usr/bin/git filter-branch -f --index-filter 'git rm --cached --ignore-unmatch {file}' HEAD".format(file=file)
+                _, error = call_cmd_with_status(cmd_line, self.pwd)
+                if error:
+                    print(cmd_line)
+                    print(error)
+            print("clean fit dir")
+            for special_path in self.fit_dir:
+                cmd_line = "/usr/bin/git filter-branch -f --index-filter 'git rm -r --cached --ignore-unmatch {path}' HEAD".format(path=special_path)
+                _, error = call_cmd_with_status(cmd_line, self.pwd)
+                if error:
+                    print(cmd_line)
+                    print(error)
+            # print("go back old branch")
+            # if branch:
+            #     cmd_line = "/usr/bin/git checkout {old_branch}".format(old_branch=old_branch)
+            #     print(cmd_line)
+            #     _, error = call_cmd_with_status(cmd_line, self.pwd)
+            #     if error:
+            #         print(cmd_line)
+            #         print(error)
+            print("git clean end")
 
     @property
     def pwd(self)->str:
@@ -107,33 +109,34 @@ class ConfigYAML:
         :return:
         """
         branch = self.config.get("branch", "")
-        old_branch = current_branch(self.pwd)
-        print("checkout branch")
-        if branch:
-            cmd_line = "/usr/bin/git checkout {branch}".format(branch=branch)
-            print(cmd_line)
-            _, error = call_cmd_with_status(cmd_line, self.pwd)
-            if error:
-                print(cmd_line)
-                print(error)
+        with EnterBranch(branch, self.pwd):
+            # old_branch = current_branch(self.pwd)
+            # print("checkout branch")
+            # if branch:
+            #     cmd_line = "/usr/bin/git checkout {branch}".format(branch=branch)
+            #     print(cmd_line)
+            #     _, error = call_cmd_with_status(cmd_line, self.pwd)
+            #     if error:
+            #         print(cmd_line)
+            #         print(error)
 
-        fit_file_list = []
-        fit_file_list += self.handle_file()
-        # fit_file_list += self.handle_dir()
-        fit_file_list += self.handle_characteristic()
-        # git用的是相对路径，所以我们也要用相对路径
-        fit_file_list = [item.replace(self.pwd+"/", "") for item in fit_file_list]
-        self.fit_file_list = remove_dumplacat_item(fit_file_list)
-        self.fit_dir = self.config.get("dir", [])
+            fit_file_list = []
+            fit_file_list += self.handle_file()
+            # fit_file_list += self.handle_dir()
+            fit_file_list += self.handle_characteristic()
+            # git用的是相对路径，所以我们也要用相对路径
+            fit_file_list = [item.replace(self.pwd+"/", "") for item in fit_file_list]
+            self.fit_file_list = remove_dumplacat_item(fit_file_list)
+            self.fit_dir = self.config.get("dir", [])
 
-        print("go back old branch")
-        if branch:
-            cmd_line = "/usr/bin/git checkout {old_branch}".format(old_branch=old_branch)
-            print(cmd_line)
-            _, error = call_cmd_with_status(cmd_line, self.pwd)
-            if error:
-                print(cmd_line)
-                print(error)
+            # print("go back old branch")
+            # if branch:
+            #     cmd_line = "/usr/bin/git checkout {old_branch}".format(old_branch=old_branch)
+            #     print(cmd_line)
+            #     _, error = call_cmd_with_status(cmd_line, self.pwd)
+            #     if error:
+            #         print(cmd_line)
+            #         print(error)
 
     def handle_dir(self)->[]:
         """
@@ -278,15 +281,32 @@ class CollectPwd:
         self.pwd_list.append(config.config["pwd"])
 
 
-class EnterBranch:
-    def __init__(self, branch_name):
-        self.branch_name = branch_name
+class EnterBranch(ContextDecorator):
+    """
+    进入和离开指定的branch
+    """
+    def __init__(self, branch, pwd):
+        self.branch = branch
+        self.pwd = pwd
+        if not branch:
+            raise Exception("branch should be specialed.")
 
     def __enter__(self):
-        pass
+        self.old_branch = current_branch(self.pwd)
+        cmd_line = "/usr/bin/git checkout {branch}".format(branch=self.branch)
+        print(cmd_line)
+        _, error = call_cmd_with_status(cmd_line, self.pwd)
+        if error:
+            print(cmd_line)
+            print(error)
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        pass
+        cmd_line = "/usr/bin/git checkout {old_branch}".format(old_branch=self.old_branch)
+        print(cmd_line)
+        _, error = call_cmd_with_status(cmd_line, self.pwd)
+        if error:
+            print(cmd_line)
+            print(error)
 
 
 def remove_dumplacat_item(data:list):
@@ -318,6 +338,7 @@ def call_cmd_with_status(cmd_line, work_dir):
     return out, error
     # print(cmd_line, work_dir)
     # return "", ""
+
 
 def current_branch(target_path):
     out, error = call_cmd_with_status("/usr/bin/git branch", target_path)
