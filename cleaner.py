@@ -278,6 +278,17 @@ class CollectPwd:
         self.pwd_list.append(config.config["pwd"])
 
 
+class EnterBranch:
+    def __init__(self, branch_name):
+        self.branch_name = branch_name
+
+    def __enter__(self):
+        pass
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        pass
+
+
 def remove_dumplacat_item(data:list):
     """
     删除一个列表中重复的项目
