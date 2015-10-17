@@ -253,7 +253,8 @@ class EnterBranch(ContextDecorator):
         self.old_branch = current_branch(self.pwd)
         cmd_line = "/usr/bin/git checkout {branch}".format(branch=self.branch)
         # print(cmd_line)
-        call_cmd_with_status(cmd_line, self.pwd, ["Switched to branch '{branch}'".format(branch=self.branch)])
+        call_cmd_with_status(cmd_line, self.pwd, )
+        # call_cmd_with_status(cmd_line, self.pwd, ["Switched to branch '{branch}'".format(branch=self.branch)])
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         cmd_line = "/usr/bin/git checkout {old_branch}".format(old_branch=self.old_branch)
@@ -288,11 +289,13 @@ def call_cmd_with_status(cmd_line, work_dir, accept_error=()):
     pr = subprocess.Popen(cmd_line, cwd=work_dir, shell=True,
                           stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     (out, error) = pr.communicate()
-    if error:
-        err_msg = error.decode()
-        if err_msg not in accept_error:
-            print(cmd_line)
-            print(error)
+    if pr.returncode != 0:
+        if error:
+            err_msg = error.decode()
+            if err_msg not in accept_error:
+                print(cmd_line)
+                print(error)
+            print(pr.returncode)
             raise Exception(error.decode("utf-8"))
     return out, error
 
