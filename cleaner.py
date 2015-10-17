@@ -27,37 +27,14 @@ class ConfigYAML:
         print("{name}'s git clean start".format(name=self.name))
         branch = self.config.get("branch", "")
         with EnterBranch(branch, self.pwd):
-            # old_branch = current_branch(self.pwd)
-            # print("checkout branch")
-            # if branch:
-            #     cmd_line = "/usr/bin/git checkout {branch}".format(branch=branch)
-            #     print(cmd_line)
-            #     _, error = call_cmd_with_status(cmd_line, self.pwd)
-            #     if error:
-            #         print(cmd_line)
-            #         print(error)
             print("clean fit file")
             for file in self.fit_file_list:
                 cmd_line = "/usr/bin/git filter-branch -f --index-filter 'git rm --cached --ignore-unmatch {file}' HEAD".format(file=file)
-                _, error = call_cmd_with_status(cmd_line, self.pwd)
-                if error:
-                    print(cmd_line)
-                    print(error)
+                call_cmd_with_status(cmd_line, self.pwd)
             print("clean fit dir")
             for special_path in self.fit_dir:
                 cmd_line = "/usr/bin/git filter-branch -f --index-filter 'git rm -r --cached --ignore-unmatch {path}' HEAD".format(path=special_path)
-                _, error = call_cmd_with_status(cmd_line, self.pwd)
-                if error:
-                    print(cmd_line)
-                    print(error)
-            # print("go back old branch")
-            # if branch:
-            #     cmd_line = "/usr/bin/git checkout {old_branch}".format(old_branch=old_branch)
-            #     print(cmd_line)
-            #     _, error = call_cmd_with_status(cmd_line, self.pwd)
-            #     if error:
-            #         print(cmd_line)
-            #         print(error)
+                call_cmd_with_status(cmd_line, self.pwd)
             print("git clean end")
 
     @property
@@ -110,16 +87,6 @@ class ConfigYAML:
         """
         branch = self.config.get("branch", "")
         with EnterBranch(branch, self.pwd):
-            # old_branch = current_branch(self.pwd)
-            # print("checkout branch")
-            # if branch:
-            #     cmd_line = "/usr/bin/git checkout {branch}".format(branch=branch)
-            #     print(cmd_line)
-            #     _, error = call_cmd_with_status(cmd_line, self.pwd)
-            #     if error:
-            #         print(cmd_line)
-            #         print(error)
-
             fit_file_list = []
             fit_file_list += self.handle_file()
             # fit_file_list += self.handle_dir()
@@ -128,15 +95,6 @@ class ConfigYAML:
             fit_file_list = [item.replace(self.pwd+"/", "") for item in fit_file_list]
             self.fit_file_list = remove_dumplacat_item(fit_file_list)
             self.fit_dir = self.config.get("dir", [])
-
-            # print("go back old branch")
-            # if branch:
-            #     cmd_line = "/usr/bin/git checkout {old_branch}".format(old_branch=old_branch)
-            #     print(cmd_line)
-            #     _, error = call_cmd_with_status(cmd_line, self.pwd)
-            #     if error:
-            #         print(cmd_line)
-            #         print(error)
 
     def handle_dir(self)->[]:
         """
@@ -294,19 +252,13 @@ class EnterBranch(ContextDecorator):
     def __enter__(self):
         self.old_branch = current_branch(self.pwd)
         cmd_line = "/usr/bin/git checkout {branch}".format(branch=self.branch)
-        print(cmd_line)
-        _, error = call_cmd_with_status(cmd_line, self.pwd)
-        if error:
-            print(cmd_line)
-            print(error)
+        # print(cmd_line)
+        call_cmd_with_status(cmd_line, self.pwd)
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         cmd_line = "/usr/bin/git checkout {old_branch}".format(old_branch=self.old_branch)
-        print(cmd_line)
-        _, error = call_cmd_with_status(cmd_line, self.pwd)
-        if error:
-            print(cmd_line)
-            print(error)
+        # print(cmd_line)
+        call_cmd_with_status(cmd_line, self.pwd)
 
 
 def remove_dumplacat_item(data:list):
@@ -335,9 +287,11 @@ def call_cmd_with_status(cmd_line, work_dir):
     pr = subprocess.Popen(cmd_line, cwd=work_dir, shell=True,
                           stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     (out, error) = pr.communicate()
+    if error:
+        print(cmd_line)
+        print(error)
+        raise Exception(error.decode("utf-8"))
     return out, error
-    # print(cmd_line, work_dir)
-    # return "", ""
 
 
 def current_branch(target_path):
