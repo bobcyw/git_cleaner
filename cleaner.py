@@ -289,6 +289,7 @@ def call_cmd_with_status(cmd_line, work_dir, accept_error=()):
     pr = subprocess.Popen(cmd_line, cwd=work_dir, shell=True,
                           stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     (out, error) = pr.communicate()
+    # 用returncode而不是其他东西来检查返回
     if pr.returncode != 0:
         if error:
             err_msg = error.decode()
