@@ -251,6 +251,10 @@ class CollectPwd:
         self.pwd_list.append(config.config["pwd"])
 
 
+class BranchNotSpecial(Exception):
+    pass
+
+
 class EnterBranch(ContextDecorator):
     """
     进入和离开指定的branch
@@ -260,7 +264,7 @@ class EnterBranch(ContextDecorator):
         self.branch = branch
         self.pwd = pwd
         if not branch:
-            raise Exception("branch should be specialed.")
+            raise BranchNotSpecial("branch should be special.")
 
     def __enter__(self):
         self.old_branch = current_branch(self.pwd)
@@ -350,6 +354,11 @@ if __name__ == '__main__':
             cy.enum_config(lambda config: config.clean_git())
             print("clean git complete")
     except ReturnCodeErr as e:
+        if ret.debug:
+            raise e
+        else:
+            print(str(e))
+    except BranchNotSpecial as e:
         if ret.debug:
             raise e
         else:
