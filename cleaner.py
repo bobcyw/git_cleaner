@@ -93,15 +93,18 @@ class ConfigYAML:
         :return:
         """
         branch = self.config.get("branch", "")
-        with EnterBranch(branch, self.pwd):
-            fit_file_list = []
-            fit_file_list += self.handle_file()
-            # fit_file_list += self.handle_dir()
-            fit_file_list += self.handle_characteristic()
-            # git用的是相对路径，所以我们也要用相对路径
-            fit_file_list = [item.replace(self.pwd + "/", "") for item in fit_file_list]
-            self.fit_file_list = remove_duplicate_item(fit_file_list)
-            self.fit_dir = self.config.get("dir", [])
+        try:
+            with EnterBranch(branch, self.pwd):
+                fit_file_list = []
+                fit_file_list += self.handle_file()
+                # fit_file_list += self.handle_dir()
+                fit_file_list += self.handle_characteristic()
+                # git用的是相对路径，所以我们也要用相对路径
+                fit_file_list = [item.replace(self.pwd + "/", "") for item in fit_file_list]
+                self.fit_file_list = remove_duplicate_item(fit_file_list)
+                self.fit_dir = self.config.get("dir", [])
+        except BranchNotSpecial:
+            raise BranchNotSpecial("{name}'s branch not special".format(self.name))
 
     def handle_dir(self) -> []:
         """
