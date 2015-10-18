@@ -264,7 +264,7 @@ class EnterBranch(ContextDecorator):
         call_cmd_with_status(cmd_line, self.pwd, )
         # call_cmd_with_status(cmd_line, self.pwd, ["Switched to branch '{branch}'".format(branch=self.branch)])
 
-    def __exit__(self):
+    def __exit__(self, *args, **kwargs):
         cmd_line = "/usr/bin/git checkout {old_branch}".format(old_branch=self.old_branch)
         # print(cmd_line)
         call_cmd_with_status(cmd_line, self.pwd)
