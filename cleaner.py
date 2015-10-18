@@ -104,7 +104,7 @@ class ConfigYAML:
                 self.fit_file_list = remove_duplicate_item(fit_file_list)
                 self.fit_dir = self.config.get("dir", [])
         except BranchNotSpecial:
-            raise BranchNotSpecial("{name}'s branch not special".format(self.name))
+            raise BranchNotSpecial("{name}'s branch not special".format(name=self.name))
 
     def handle_dir(self) -> []:
         """
