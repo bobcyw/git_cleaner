@@ -177,16 +177,21 @@ class ConfigYAML:
         handler(self)
 
     def report(self, put=print):
-        put(self.name)
+        put("**************")
+        put(" name: {name}".format(name=self.name))
+        put(" branch: {branch}".format(branch=self.config["branch"]))
         if self.fit_file_list:
-            put("fit file")
-            for file in self.fit_file_list:
-                put(file)
+            put(" {count} files are fit".format(count=len(self.fit_file_list)))
+            for index, file in enumerate(self.fit_file_list):
+                put("  {index:0>3}. {fn}".format(index=index+1, fn=file))
         if self.fit_dir:
-            put("fit dir")
-            for path in self.fit_dir:
-                put(path)
-        put("end")
+            put(" {count} dirs are fit".format(count=len(self.fit_dir)))
+            for index, path in enumerate(self.fit_dir):
+                put("  {index:0>3}. {fn}".format(index=index+1, fn=path))
+        if not self.fit_file_list and not self.fit_dir:
+            put(" nothing need to remove")
+        else:
+            put(" report complete")
 
 
 class CollectAnyFile:
