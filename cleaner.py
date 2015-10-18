@@ -6,6 +6,7 @@ from pathlib import Path
 import subprocess
 import pyparsing
 from contextlib import ContextDecorator
+import platform
 
 
 class ConfigYAML:
@@ -342,6 +343,11 @@ def current_branch(target_path):
     return ""
 
 
+def say(content: str):
+    if platform.system() == "Darwin":
+        call_cmd_with_status("say {content} -r 200".format(content=content), None)
+
+
 if __name__ == '__main__':
     import argparse
 
@@ -360,9 +366,12 @@ if __name__ == '__main__':
         if ret.debug:
             raise e
         else:
+            say("出错了")
             print(str(e))
     except BranchNotSpecial as e:
         if ret.debug:
             raise e
         else:
             print(str(e))
+    else:
+        say("检查完成")
