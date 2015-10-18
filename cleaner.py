@@ -354,7 +354,9 @@ def say(content: str):
 
 if __name__ == '__main__':
     import argparse
-
+    import datetime
+    say("你好 下面开始进行项目敏感信息排查")
+    start = datetime.datetime.now()
     parser = argparse.ArgumentParser("根据指定的yaml定义的规则彻底删除掉git中符合的文件")
     parser.add_argument("config_file", metavar="配置yaml", help="需要删除文件的定义文件，用yaml格式")
     parser.add_argument("-write", action="store_true", help="执行清理操作，没有这个选项，只显示计划清理的文件，而不真正操作")
@@ -378,4 +380,6 @@ if __name__ == '__main__':
         else:
             print(str(e))
     else:
-        say("检查完成")
+        end = datetime.datetime.now()
+        cost = end - start
+        say("检查完成 耗时{cost}秒".format(cost=cost.seconds))
