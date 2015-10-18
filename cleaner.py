@@ -1,4 +1,5 @@
 __author__ = 'caoyawen'
+
 import yaml
 import os
 from pathlib import Path
@@ -19,6 +20,11 @@ class ConfigYAML:
         self.debug = debug
         if debug:
             self.handle_file_list = []
+            self.add_by_handle_file = []
+            self.add_by_handle_dir = []
+            self.add_by_characteristic = []
+        self.fit_file_list = []
+        self.fit_dir = []
         self.config = self.load_config()
         self.name = self.config.get("name", "缺省配置文件")
         self.handle_config()
@@ -29,16 +35,19 @@ class ConfigYAML:
         with EnterBranch(branch, self.pwd):
             print("clean fit file")
             for file in self.fit_file_list:
-                cmd_line = "/usr/bin/git filter-branch -f --index-filter 'git rm --cached --ignore-unmatch {file}' HEAD".format(file=file)
+                cmd_line = "/usr/bin/git filter-branch -f --index-filter " \
+                           "'git rm --cached --ignore-unmatch {file}' HEAD".format(file=file)
                 call_cmd_with_status(cmd_line, self.pwd)
             print("clean fit dir")
             for special_path in self.fit_dir:
-                cmd_line = "/usr/bin/git filter-branch -f --index-filter 'git rm -r --cached --ignore-unmatch {path}' HEAD".format(path=special_path)
+                cmd_line = "/usr/bin/git filter-branch -f --index-filter " \
+                           "'git rm -r --cached --ignore-unmatch {path}' HEAD".format(
+                    path=special_path)
                 call_cmd_with_status(cmd_line, self.pwd)
             print("git clean end")
 
     @property
-    def pwd(self)->str:
+    def pwd(self) -> str:
         return self.config["pwd"]
 
     @property
@@ -54,10 +63,9 @@ class ConfigYAML:
         exclude_dir.append(self.fn)
         return exclude_dir
 
-    def load_config(self)->dict:
+    def load_config(self) -> dict:
         """
         载入配置文件
-        :param fn: 指定的目录
         :return: dict
         """
         config_p = Path(self.fn)
@@ -79,10 +87,9 @@ class ConfigYAML:
 
         return clean_config
 
-    def handle_config(self)->[]:
+    def handle_config(self) -> []:
         """
         处理配置文件
-        :param config:
         :return:
         """
         branch = self.config.get("branch", "")
@@ -92,14 +99,13 @@ class ConfigYAML:
             # fit_file_list += self.handle_dir()
             fit_file_list += self.handle_characteristic()
             # git用的是相对路径，所以我们也要用相对路径
-            fit_file_list = [item.replace(self.pwd+"/", "") for item in fit_file_list]
-            self.fit_file_list = remove_dumplacat_item(fit_file_list)
+            fit_file_list = [item.replace(self.pwd + "/", "") for item in fit_file_list]
+            self.fit_file_list = remove_duplicate_item(fit_file_list)
             self.fit_dir = self.config.get("dir", [])
 
-    def handle_dir(self)->[]:
+    def handle_dir(self) -> []:
         """
         把指定目录下的所有文件都包含进去
-        :param config:
         :return: 符合清理的文件列表
         """
         # fit_file_list = []
@@ -111,20 +117,18 @@ class ConfigYAML:
             self.add_by_handle_dir = caf.file_list
         return caf.file_list
 
-    def handle_file(self)->[]:
+    def handle_file(self) -> []:
         """
         得到文件
-        :param config:
         :return: 符合清理的文件列表
         """
         if self.debug:
             self.add_by_handle_file = [os.path.join(self.pwd, item) for item in self.config.get("file", [])]
         return [os.path.join(self.pwd, item) for item in self.config.get("file", [])]
 
-    def handle_characteristic(self)->[]:
+    def handle_characteristic(self) -> []:
         """
         根据特征值得到符合的文件
-        :param config:
         :return: []
         """
         characteristic_list = self.config.get("characteristic", [])
@@ -137,9 +141,9 @@ class ConfigYAML:
         return cff.fit_file
 
     def __repr__(self):
-        return "{name}: {content}".format(name = self.name, content = str(self.config))
+        return "{name}: {content}".format(name=self.name, content=str(self.config))
 
-    def enum_file(self, given_path: str, exclude_path:[], handler):
+    def enum_file(self, given_path: str, exclude_path: [], handler):
         """
         遍历除了exclude_path指定的目录以外的其他目录
         :param given_path: 要遍历的目录
@@ -189,6 +193,7 @@ class CollectAnyFile:
     """
     收集所有的特征值文件
     """
+
     def __init__(self):
         self.file_list = []
 
@@ -200,6 +205,7 @@ class CollectFitFile:
     """
     收集符合特征值的文件
     """
+
     def __init__(self, characteristic: []):
         self.characteristic = characteristic
         self.fit_file = []
@@ -219,10 +225,10 @@ class CollectFitFile:
         for one_char in self.characteristic:
             for exclude_file in one_char.get("exclude", []):
                 if file_item.name == exclude_file:
-                    #跳过需要排除的文件
+                    # 跳过需要排除的文件
                     self.exclude_file.append(exclude_file)
                     return
-                # print("fit file {fn} by {exclude}".format(fn=file_item.name, exclude=exclude_file))
+                    # print("fit file {fn} by {exclude}".format(fn=file_item.name, exclude=exclude_file))
             if one_char["data"] in content:
                 self.fit_file.append(str(file_item))
                 break
@@ -232,6 +238,7 @@ class CollectPwd:
     """
     收集配置文件里的pwd
     """
+
     def __init__(self):
         self.pwd_list = []
 
@@ -243,6 +250,7 @@ class EnterBranch(ContextDecorator):
     """
     进入和离开指定的branch
     """
+
     def __init__(self, branch, pwd):
         self.branch = branch
         self.pwd = pwd
@@ -256,13 +264,13 @@ class EnterBranch(ContextDecorator):
         call_cmd_with_status(cmd_line, self.pwd, )
         # call_cmd_with_status(cmd_line, self.pwd, ["Switched to branch '{branch}'".format(branch=self.branch)])
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self):
         cmd_line = "/usr/bin/git checkout {old_branch}".format(old_branch=self.old_branch)
         # print(cmd_line)
         call_cmd_with_status(cmd_line, self.pwd)
 
 
-def remove_dumplacat_item(data:list):
+def remove_duplicate_item(data: list):
     """
     删除一个列表中重复的项目
     :param data:
@@ -278,26 +286,29 @@ def remove_dumplacat_item(data:list):
     return new_data
 
 
-def call_cmd_with_status(cmd_line, work_dir, accept_error=()):
+class ReturnCodeErr(Exception):
+    pass
+
+
+def call_cmd_with_status(cmd_line, work_dir):
     """
     处理函数
     :param cmd_line:
     :param work_dir:
-    :param accept_error: 有些错误不是错误
     :return: 正常返回，错误返回
     """
     pr = subprocess.Popen(cmd_line, cwd=work_dir, shell=True,
                           stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     (out, error) = pr.communicate()
-    # 用returncode而不是其他东西来检查返回
+    # 用return_code而不是其他东西来检查返回
     if pr.returncode != 0:
         if error:
             err_msg = error.decode()
-            if err_msg not in accept_error:
-                print(cmd_line)
-                print(error)
-            print(pr.returncode)
-            raise Exception(error.decode("utf-8"))
+            print("cwd:{cwd}".format(cwd=work_dir))
+            print("cmd:{cmd}".format(cmd=cmd_line))
+            # print(error.decode("utf-8"))
+            # print(pr.returncode)
+            raise ReturnCodeErr(error.decode("utf-8"))
     return out, error
 
 
@@ -312,7 +323,8 @@ def current_branch(target_path):
                 # 解析 b'* master'
                 branch_des = one_line.decode('utf-8')
                 # print(branch_des)
-                current_branch_parse = pyparsing.Literal("*") + pyparsing.Word(pyparsing.alphas+pyparsing.alphanums)("branch")
+                current_branch_parse = pyparsing.Literal("*") + pyparsing.Word(pyparsing.alphas + pyparsing.alphanums)(
+                    "branch")
                 result = current_branch_parse.parseString(branch_des)
                 return result.branch
     return ""
@@ -320,12 +332,20 @@ def current_branch(target_path):
 
 if __name__ == '__main__':
     import argparse
+
     parser = argparse.ArgumentParser("根据指定的yaml定义的规则彻底删除掉git中符合的文件")
     parser.add_argument("config_file", metavar="配置yaml", help="需要删除文件的定义文件，用yaml格式")
     parser.add_argument("-write", action="store_true", help="执行清理操作，没有这个选项，只显示计划清理的文件，而不真正操作")
+    parser.add_argument("-debug", action="store_true", help="出错时显示内部信息")
     ret = parser.parse_args()
-    cy = ConfigYAML(ret.config_file)
-    cy.enum_config(lambda config: config.report())
-    if ret.write is True:
-        cy.enum_config(lambda config: config.clean_git())
-        print("clean git complete")
+    try:
+        cy = ConfigYAML(ret.config_file, ret.debug)
+        cy.enum_config(lambda config: config.report())
+        if ret.write is True:
+            cy.enum_config(lambda config: config.clean_git())
+            print("clean git complete")
+    except ReturnCodeErr as e:
+        if ret.debug:
+            raise e
+        else:
+            print(str(e))
