@@ -260,7 +260,7 @@ class EnterBranch(ContextDecorator):
         self.branch = branch
         self.pwd = pwd
         if not branch:
-            raise Exception("branch should be specialed.")
+            raise Exception("branch should be specialed. {pwd}".format(pwd=self.pwd))
 
     def __enter__(self):
         self.old_branch = current_branch(self.pwd)
