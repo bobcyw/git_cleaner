@@ -13,6 +13,7 @@ class CollectAllFitFile:
     def __call__(self, config: ConfigYAML):
         self.all_fit_file += config.fit_file_list
 
+
 class CollectAllFitDir:
     def __init__(self):
         self.all_fit_dir = []

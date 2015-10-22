@@ -16,3 +16,5 @@ dir:
 
 append:
   - append/cleaner.yaml
+
+branch: public
