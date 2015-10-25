@@ -10,3 +10,4 @@ characteristic:
 dir:
   - special_dir/sub_dir
 
+branch: public
