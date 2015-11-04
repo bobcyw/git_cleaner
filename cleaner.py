@@ -6,6 +6,7 @@ from pathlib import Path
 import subprocess
 import pyparsing
 from contextlib import ContextDecorator
+import platform
 
 
 class ConfigYAML:
@@ -93,15 +94,18 @@ class ConfigYAML:
         :return:
         """
         branch = self.config.get("branch", "")
-        with EnterBranch(branch, self.pwd):
-            fit_file_list = []
-            fit_file_list += self.handle_file()
-            # fit_file_list += self.handle_dir()
-            fit_file_list += self.handle_characteristic()
-            # git用的是相对路径，所以我们也要用相对路径
-            fit_file_list = [item.replace(self.pwd + "/", "") for item in fit_file_list]
-            self.fit_file_list = remove_duplicate_item(fit_file_list)
-            self.fit_dir = self.config.get("dir", [])
+        try:
+            with EnterBranch(branch, self.pwd):
+                fit_file_list = []
+                fit_file_list += self.handle_file()
+                # fit_file_list += self.handle_dir()
+                fit_file_list += self.handle_characteristic()
+                # git用的是相对路径，所以我们也要用相对路径
+                fit_file_list = [item.replace(self.pwd + "/", "") for item in fit_file_list]
+                self.fit_file_list = remove_duplicate_item(fit_file_list)
+                self.fit_dir = self.config.get("dir", [])
+        except BranchNotSpecial:
+            raise BranchNotSpecial("{name}'s branch not special".format(name=self.name))
 
     def handle_dir(self) -> []:
         """
@@ -179,20 +183,24 @@ class ConfigYAML:
     def report(self, put=print):
         put("**************")
         put(" name: {name}".format(name=self.name))
+        say("开始检查 {name}".format(name=self.name))
         put(" branch: {branch}".format(branch=self.config["branch"]))
         if self.fit_file_list:
             put(" {count} files are fit".format(count=len(self.fit_file_list)))
+            say("有{count}个文件符合删除要求".format(count=len(self.fit_dir)))
             for index, file in enumerate(self.fit_file_list):
                 put("  {index:0>3}. {fn}".format(index=index+1, fn=file))
         if self.fit_dir:
             put(" {count} dirs are fit".format(count=len(self.fit_dir)))
+            say("有{count}个目录符合删除要求".format(count=len(self.fit_dir)))
             for index, path in enumerate(self.fit_dir):
                 put("  {index:0>3}. {fn}".format(index=index+1, fn=path))
         if not self.fit_file_list and not self.fit_dir:
             put(" nothing need to remove")
+            say("没有需要删除的文件")
         else:
             put(" report complete")
-
+            say("报告结束")
 
 class CollectAnyFile:
     """
@@ -251,6 +259,10 @@ class CollectPwd:
         self.pwd_list.append(config.config["pwd"])
 
 
+class BranchNotSpecial(Exception):
+    pass
+
+
 class EnterBranch(ContextDecorator):
     """
     进入和离开指定的branch
@@ -260,7 +272,7 @@ class EnterBranch(ContextDecorator):
         self.branch = branch
         self.pwd = pwd
         if not branch:
-            raise Exception("branch should be specialed. {pwd}".format(pwd=self.pwd))
+            raise Exception("branch should be specialed.")
 
     def __enter__(self):
         self.old_branch = current_branch(self.pwd)
@@ -335,9 +347,16 @@ def current_branch(target_path):
     return ""
 
 
+def say(content: str):
+    if platform.system() == "Darwin":
+        call_cmd_with_status("say {content} -r 200".format(content=content), None)
+
+
 if __name__ == '__main__':
     import argparse
-
+    import datetime
+    say("你好 下面开始进行项目敏感信息排查")
+    start = datetime.datetime.now()
     parser = argparse.ArgumentParser("根据指定的yaml定义的规则彻底删除掉git中符合的文件")
     parser.add_argument("config_file", metavar="配置yaml", help="需要删除文件的定义文件，用yaml格式")
     parser.add_argument("-write", action="store_true", help="执行清理操作，没有这个选项，只显示计划清理的文件，而不真正操作")
@@ -353,4 +372,14 @@ if __name__ == '__main__':
         if ret.debug:
             raise e
         else:
+            say("出错了")
             print(str(e))
+    except BranchNotSpecial as e:
+        if ret.debug:
+            raise e
+        else:
+            print(str(e))
+    else:
+        end = datetime.datetime.now()
+        cost = end - start
+        say("检查完成 耗时{cost}秒".format(cost=cost.seconds))
