@@ -1,9 +1,9 @@
-项目在开源前，用来清理项目中的敏感文件
+项目在开源前，用来清理项目中的敏感文件  
 从git中彻底删除
 
 ##使用方法
-在项目根目录下创建一个yaml配置文件
-例子文件
+在项目根目录下创建一个yaml配置文件,名字叫cleaner.yaml 
+例子文件  
 ```yaml
 #配置文件名称，用于输出辨识
 name: resume工程下需要删除的文件
@@ -28,3 +28,5 @@ append:
 
 branch: public
 ```
+
+然后执行 ```python3 -m cleaner cleaner.yaml``` 可以得到扫描报告,确认后,执行```python3 -m cleaner cleaner.yaml -write```正式修改.
