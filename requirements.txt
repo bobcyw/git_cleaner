@@ -1,2 +1,2 @@
-PyYAML==3.11
+PyYAML==4.2b4
 pyparsing==2.0.3
